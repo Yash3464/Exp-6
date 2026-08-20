@@ -152,7 +152,7 @@ Yours forever ♥`;
   }
 
   /* ═══════════════════════════════════════
-     3. FLOWER SHOWER — Continuous rain
+     3. FLOWER SHOWER — Dense continuous rain
      ═══════════════════════════════════════ */
   function startFlowerShower() {
     flowerShower.classList.add('active');
@@ -163,51 +163,43 @@ Yours forever ♥`;
     FLOWER_IMAGES.forEach(src => { const img = new Image(); img.src = src; });
 
     let spawned = 0;
-    const maxFlowers = 200;
-    const showerDuration = 5500; // ms total shower lasts
-    const spawnInterval = 25;   // ms between spawns
+    const maxFlowers = 350;
+    const showerDuration = 6000;
+    const spawnInterval = 15;
 
     function spawnFlower() {
       if (spawned >= maxFlowers) return;
       spawned++;
 
-      const size = 60 + Math.random() * 150;
-      const x = Math.random() * (vw + 100) - 50;
-      const imgSrc = FLOWER_IMAGES[Math.floor(Math.random() * FLOWER_IMAGES.length)];
-      const rotation = (Math.random() - 0.5) * 60;
-      const fallDuration = 1.8 + Math.random() * 1.5;
-      const drift = (Math.random() - 0.5) * 80;
+      const size = 100 + Math.random() * 150;
+      const x = Math.random() * (vw + 80) - 40;
+      const rotation = (Math.random() - 0.5) * 50;
+      const fallDuration = 2.2 + Math.random() * 1.8;
+      const drift = (Math.random() - 0.5) * 60;
 
       const el = document.createElement('div');
       el.className = 'shower-flower';
-      el.style.cssText = `
-        left:${x}px; top:${-size - 20}px;
-        width:${size}px; height:${size}px;
-        transform:rotate(${rotation}deg);
-      `;
+      el.style.cssText = `left:${x}px;top:${-size - 20}px;width:${size}px;height:${size}px;transform:rotate(${rotation}deg);`;
       const img = document.createElement('img');
-      img.src = imgSrc;
+      img.src = FLOWER_IMAGES[Math.floor(Math.random() * FLOWER_IMAGES.length)];
       img.alt = '';
       el.appendChild(img);
       flowerShower.appendChild(el);
 
-      // Animate: fall from above viewport to below viewport
       gsap.to(el, {
-        y: vh + size + 40,
+        y: vh + size + 50,
         x: drift,
-        rotation: '+=' + ((Math.random() - 0.5) * 120),
+        rotation: '+=' + ((Math.random() - 0.5) * 80),
         duration: fallDuration,
         ease: 'none',
         onComplete: () => el.remove(),
       });
 
-      setTimeout(spawnFlower, spawnInterval + Math.random() * 15);
+      setTimeout(spawnFlower, spawnInterval + Math.random() * 10);
     }
 
-    // Start spawning
     spawnFlower();
 
-    // After the shower duration, fade out and clean up
     setTimeout(() => {
       gsap.to(flowerShower, {
         opacity: 0,
@@ -534,7 +526,142 @@ Yours forever ♥`;
     .to('.final-sub', { opacity: 1, duration: 0.6, ease: 'power2.out' }, '-=0.4')
     .to('.replay-btn', { opacity: 1, duration: 0.5, ease: 'power2.out' }, '-=0.2');
 
+    // ── Section 7: Like Slider ──
+    initLikeSlider();
+
     ScrollTrigger.refresh();
+  }
+
+  /* ═══════════════════════════════════════
+     7b. LIKE SLIDER (Horizontal Swipe)
+     ═══════════════════════════════════════ */
+  function initLikeSlider() {
+    const slider = document.getElementById('likeSlider');
+    const dots = document.querySelectorAll('.like-dot');
+    const hint = document.getElementById('likeSwipeHint');
+    if (!slider || !dots.length) return;
+
+    let currentSlide = 0;
+    const totalSlides = 4;
+    let startX = 0;
+    let isDraggingSlider = false;
+    let reasonsAnimated = false;
+
+    function goToSlide(idx) {
+      currentSlide = Math.max(0, Math.min(idx, totalSlides - 1));
+      slider.style.transform = `translateX(-${currentSlide * 25}%)`;
+
+      // Update dots
+      dots.forEach((d, i) => {
+        d.classList.toggle('active', i === currentSlide);
+      });
+
+      // Hide swipe hint after first swipe
+      if (currentSlide > 0 && hint) {
+        hint.style.opacity = '0';
+        hint.style.pointerEvents = 'none';
+      }
+
+      // Animate reason tags on slide 4
+      if (currentSlide === 3 && !reasonsAnimated) {
+        reasonsAnimated = true;
+        animateReasonTags();
+      }
+    }
+
+    function animateReasonTags() {
+      const tags = document.querySelectorAll('.reason-tag');
+      tags.forEach((tag, i) => {
+        setTimeout(() => {
+          tag.classList.add('visible');
+        }, 30 * i);
+      });
+    }
+
+    // Touch events
+    slider.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      isDraggingSlider = true;
+    }, { passive: true });
+
+    slider.addEventListener('touchend', (e) => {
+      if (!isDraggingSlider) return;
+      isDraggingSlider = false;
+      const diff = startX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) goToSlide(currentSlide + 1);
+        else goToSlide(currentSlide - 1);
+      }
+    }, { passive: true });
+
+    // Mouse drag events
+    slider.addEventListener('mousedown', (e) => {
+      startX = e.clientX;
+      isDraggingSlider = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (!isDraggingSlider) return;
+      isDraggingSlider = false;
+      const diff = startX - e.clientX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) goToSlide(currentSlide + 1);
+        else goToSlide(currentSlide - 1);
+      }
+    });
+
+    // Dot click navigation
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        goToSlide(parseInt(dot.dataset.slide));
+      });
+    });
+
+    // Keyboard navigation when section is in view
+    document.addEventListener('keydown', (e) => {
+      if (!isUnlocked) return;
+      const section = document.getElementById('likeSection');
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight * 0.5 && rect.bottom > window.innerHeight * 0.5;
+      if (!inView) return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToSlide(currentSlide - 1);
+      }
+    });
+
+    // Wheel event to capture scroll and convert to slide navigation
+    const likeSection = document.getElementById('likeSection');
+    let wheelLocked = false;
+
+    likeSection.addEventListener('wheel', (e) => {
+      const rect = likeSection.getBoundingClientRect();
+      const inView = rect.top < 10 && rect.bottom > window.innerHeight - 10;
+      if (!inView) return;
+
+      // Only intercept if not at edges
+      if (e.deltaY > 0 && currentSlide < totalSlides - 1) {
+        e.preventDefault();
+        if (!wheelLocked) {
+          wheelLocked = true;
+          goToSlide(currentSlide + 1);
+          setTimeout(() => { wheelLocked = false; }, 700);
+        }
+      } else if (e.deltaY < 0 && currentSlide > 0) {
+        e.preventDefault();
+        if (!wheelLocked) {
+          wheelLocked = true;
+          goToSlide(currentSlide - 1);
+          setTimeout(() => { wheelLocked = false; }, 700);
+        }
+      }
+    }, { passive: false });
   }
 
   /* ═══════════════════════════════════════
@@ -631,6 +758,14 @@ Yours forever ♥`;
     gsap.set('#letterBox', { opacity: 0, y: 30, scale: 0.97 });
     document.getElementById('letterTypedText').textContent = '';
     document.getElementById('letterCursor').style.display = '';
+
+    // Reset like slider
+    const likeSlider = document.getElementById('likeSlider');
+    if (likeSlider) likeSlider.style.transform = 'translateX(0)';
+    document.querySelectorAll('.like-dot').forEach((d, i) => d.classList.toggle('active', i === 0));
+    document.querySelectorAll('.reason-tag').forEach(t => t.classList.remove('visible'));
+    const likeHint = document.getElementById('likeSwipeHint');
+    if (likeHint) { likeHint.style.opacity = ''; likeHint.style.pointerEvents = ''; }
 
     ScrollTrigger.getAll().forEach(st => st.kill());
     bgMusic.pause(); bgMusic.currentTime = 0;
